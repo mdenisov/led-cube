@@ -1,5 +1,4 @@
 #include "LedFx.h"
-#include "Timer.h"
 #include "const.h"
 
 LedFx::LedFx()
