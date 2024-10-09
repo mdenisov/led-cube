@@ -6,7 +6,7 @@
 #define WIDTH 3    // ширина матрицы
 #define HEIGHT 3   // высота матрицы
 #define SEGMENTS 6 // диодов в одном "пикселе" (для создания матрицы из кусков ленты)
-#define NUM_LEDS WIDTH *HEIGHT * 6
+#define NUM_LEDS WIDTH * HEIGHT * 6
 #define BRIGHTNESS 30
 #define MATRIX_TYPE 0 // тип матрицы: 0 - зигзаг, 1 - параллельная
 #define MAX_VOLTS 3.3

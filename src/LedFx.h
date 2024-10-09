@@ -10,6 +10,7 @@
 class LedFx
 {
 public:
+    // LedFx(uint8_t size);
     LedFx();
 
     uint8_t effect = 0;
@@ -23,6 +24,27 @@ public:
     void setDebugMode(boolean debug);
 
 private:
+    uint8_t _size;
+    uint8_t _matrix[6][WIDTH][HEIGHT] = {
+        {
+            {2, 1, 0}, {5, 4, 3}, {8, 7, 6}
+        },
+        {
+            {11, 10, 9}, {14, 13, 12}, {17, 16, 15}
+        },
+        {
+            {20, 19, 18}, {23, 22, 21}, {26, 25, 24}
+        },
+        {
+            {29, 28, 27}, {32, 31, 30}, {35, 34, 33}
+        },
+        {
+            {38, 37, 36}, {41, 40, 39}, {44, 43, 42}
+        },
+        {
+            {53, 52, 51}, {50, 49, 48}, {47, 46, 45}
+        }
+    };
     CRGB _leds[NUM_LEDS];
     CRGBPalette16 _palette = RainbowColors_p;
     TBlendType _blending;
@@ -30,7 +52,7 @@ private:
     uint32_t _fadeTimer = 0;
     boolean _enabled = true;
     uint8_t _brightness = BRIGHTNESS;
-    uint8_t _effects = 15;
+    uint8_t _effects = 16;
 
     // effect variables
     uint8_t _effectStartIndex = 0;
@@ -65,7 +87,8 @@ private:
     void _fillFromPalette(uint8_t colorIndex);
     void _fillNoiseLED();
     CRGB _getColorForSide(int s, int brigthness);
-    uint16_t _getPixelNumber(int8_t x, int8_t y);
+    uint8_t _getPixelAddr(uint8_t side, int x, int y);
+    uint8_t _getPixelNumber(int8_t x, int8_t y);
     uint32_t _getPixelColor(int segment);
     uint32_t _getPixColorXY(int8_t x, int8_t y);
     void _drawPixelXY(int8_t x, int8_t y, CRGB color);

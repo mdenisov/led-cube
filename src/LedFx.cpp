@@ -1,9 +1,10 @@
 #include "LedFx.h"
 #include "const.h"
 
+// LedFx::LedFx(uint8_t size)
 LedFx::LedFx()
 {
-    // _mode = mode;
+    // _size = size;
 }
 
 void LedFx::begin(uint8_t eff)
@@ -72,10 +73,10 @@ void LedFx::loop()
         case 14:
             _lavaNoiseEffect();
             break;
-            // case 14:
-            //     _snowRoutineEffect();
-            //     break;
-            // case 15:
+        case 15:
+            _snowRoutineEffect();
+            break;
+            // case 16:
             //     _matrixRoutineEffect();
             //     break;
         }
@@ -141,6 +142,14 @@ void LedFx::enable()
 
 void LedFx::setEffect(uint8_t eff)
 {
+    if (eff == effect)
+    {
+        return;
+    }
+
+    Serial.print("setEffect: ");
+    Serial.println(eff);
+
     if (eff >= _effects)
     {
         eff = 0;
@@ -149,6 +158,7 @@ void LedFx::setEffect(uint8_t eff)
     effect = eff;
     _effectStartIndex = 0;
     _effectHue = 0;
+    _effectTimer = millis();
 }
 
 void LedFx::setNextEffect()
@@ -160,7 +170,7 @@ void LedFx::setNextEffect()
 void LedFx::_rainbowEffect()
 {
     _effectStartIndex += 1;
-    // _palette = RainbowColors_p;
+    _palette = RainbowColors_p;
     _effectSpeed = EFFECT_SPEED;
 
     _fillFromPalette(_effectStartIndex);
@@ -174,7 +184,7 @@ void LedFx::_rainbowVerticalEffect()
 
     _fillAll(CRGB::Black);
 
-    for (byte i = 1; i < SEGMENTS - 1; i++)
+    for (byte s = 1; s < SEGMENTS - 1; s++)
     {
         for (byte j = 0; j < WIDTH; j++)
         {
@@ -183,8 +193,10 @@ void LedFx::_rainbowVerticalEffect()
 
             for (byte m = 0; m < HEIGHT; m++)
             {
-                uint8_t position = size * i + j + (m * HEIGHT);
-                _leds[position] = thisColor;
+                // uint8_t position = size * s + j + (m * HEIGHT);
+                uint8_t pos = _getPixelAddr(s, j, m);
+                // _leds[position] = thisColor;
+                _leds[pos] = thisColor;
             }
         }
 
@@ -194,7 +206,7 @@ void LedFx::_rainbowVerticalEffect()
             {
                 if (j == 0 || j == WIDTH - 1 || m == 0 || m == HEIGHT - 1)
                 {
-                    CRGB color = _leds[size * i + j * HEIGHT];
+                    CRGB color = _leds[size * s + j * HEIGHT];
                     _leds[j + m * HEIGHT] = color;
                     _leds[size * (SEGMENTS - 1) + j + m * HEIGHT] = color;
                 }
@@ -221,13 +233,13 @@ void LedFx::_rainbowDiagonalEffect()
     // _fillAll(CRGB::Black);
 
     uint8_t idx = size;
-    for (byte i = 1; i < SEGMENTS - 1; i++)
+    for (byte s = 1; s < SEGMENTS - 1; s++)
     {
         for (byte j = 0; j < WIDTH; j++)
         {
             uint8_t w = j;
 
-            if (i % 2 == 0)
+            if (s % 2 == 0)
             {
                 w = WIDTH - j;
             }
@@ -236,7 +248,10 @@ void LedFx::_rainbowDiagonalEffect()
             {
                 // CRGB thisColor = ColorFromPalette(_palette, (byte)((w + m + _effectHue) * EFFECT_SCALE), 255);
                 CHSV thisColor = CHSV((byte)((w + m + _effectHue) * (EFFECT_SCALE / 4)), 255, 255);
-                _leds[idx] = thisColor;
+
+                uint8_t pos = _getPixelAddr(s, m, j);
+                _leds[pos] = thisColor;
+                // _leds[idx] = thisColor;
                 idx += 1;
             }
         }
@@ -256,10 +271,11 @@ void LedFx::_lineHorizontalEffect()
     static uint8_t direction = 0;
 
     uint8_t size = WIDTH * HEIGHT;
-    _effectHue += 3;
+    _effectHue += 5;
     _palette = RainbowColors_p;
     _effectSpeed = EFFECT_SPEED * 3;
     CHSV thisColor = CHSV((byte)(_effectHue * (EFFECT_SCALE / 4)), 255, 255);
+    CHSV thisFadeColor = CHSV((byte)(_effectHue * (EFFECT_SCALE / 4)), 255, 125);
 
     _fillAll(CRGB::Black);
 
@@ -267,11 +283,28 @@ void LedFx::_lineHorizontalEffect()
     {
         for (byte s = 1; s <= 4; s++)
         {
-            uint8_t position = size * s + HEIGHT * (_effectStartIndex - 1);
+            // uint8_t position = size * s + HEIGHT * (_effectStartIndex - 1);
 
             for (byte i = 0; i < WIDTH; i++)
             {
-                _leds[position + i] = thisColor;
+                uint8_t pos = _getPixelAddr(s, i, _effectStartIndex - 1);
+                _leds[pos] = thisColor;
+                // _leds[position + i] = thisColor;
+
+                if (direction == 1)
+                {
+                    if (_effectStartIndex > 1)
+                    {
+                        uint8_t pos = _getPixelAddr(s, i, _effectStartIndex - 2);
+                        _leds[pos] = thisFadeColor;
+                    }
+                } else {
+                    if (_effectStartIndex < HEIGHT)
+                    {
+                        uint8_t pos = _getPixelAddr(s, i, _effectStartIndex);
+                        _leds[pos] = thisFadeColor;
+                    }
+                }
             }
         }
     }
@@ -420,31 +453,15 @@ void LedFx::_axelColorRoutineEffect()
 
 void LedFx::_snowRoutineEffect()
 {
-    _palette = RainbowColors_p;
+    // _palette = RainbowColors_p;
     _effectSpeed = EFFECT_SPEED;
 
-    // сдвигаем всё вниз
-    for (byte x = 0; x < WIDTH; x++)
+    for (byte i = 0; i < NUM_LEDS; i++)
     {
-        for (byte y = 0; y < HEIGHT - 1; y++)
-        {
-            _drawPixelXY(x, y, _getPixColorXY(x, y + 1));
-        }
+        _leds[i] = random(0, 2) ? CRGB::White : CRGB::Black;
     }
 
-    for (byte x = 0; x < WIDTH; x++)
-    {
-        // заполняем случайно верхнюю строку
-        // а также не даём двум блокам по вертикали вместе быть
-        if (_getPixColorXY(x, HEIGHT - 2) == 0 && (random(0, EFFECT_SCALE) == 0))
-        {
-            _drawPixelXY(x, HEIGHT - 1, 0xE0FFFF - 0x101010 * random(0, 4));
-        }
-        else
-        {
-            _drawPixelXY(x, HEIGHT - 1, 0x000000);
-        }
-    }
+    // _fader(70);
 }
 
 void LedFx::_matrixRoutineEffect()
@@ -703,9 +720,25 @@ CRGB LedFx::_getColorForSide(int s, int brigthness)
     return c;
 }
 
-// получить номер пикселя в ленте по координатам
-uint16_t LedFx::_getPixelNumber(int8_t x, int8_t y)
+uint8_t LedFx::_getPixelAddr(uint8_t side, int x, int y)
 {
+    return _matrix[side][y][x];
+}
+
+// получить номер пикселя в ленте по координатам
+uint8_t LedFx::_getPixelNumber(int8_t x, int8_t y)
+{
+    // uint8_t sideSize = WIDTH + HEIGHT;
+    // uint8_t side = 1;
+    // uint8_t sideX = x / 4;
+    // uint8_t sideY = y / 3;
+
+    // if (x < sideSize && y < sideSize) {
+    //     side = 1;
+    // } else {
+
+    // }
+
     if (y % 2 == 0)
     { // если чётная строка
         return (y * WIDTH + x);

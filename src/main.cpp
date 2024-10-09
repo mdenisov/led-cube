@@ -1,20 +1,3 @@
-
-#include "const.h"
-
-// libs
-#include <SparkFun_ADXL345.h>
-#include <EEPROM.h>
-#include "LedFx.h"
-
-// instances
-ADXL345 adxl = ADXL345();
-LedFx ledFx = LedFx();
-
-boolean active = true;
-boolean saveMode = false;
-boolean freeFall = false;
-uint32_t restTmr = millis();
-
 /* Maxtrix Cube
  *
  *
@@ -31,15 +14,20 @@ uint32_t restTmr = millis();
  *                                   47 46 45
  */
 
-uint8_t sideTop[WIDTH][HEIGHT] = {{2, 1, 0}, {5, 4, 3}, {8, 7, 6}};
+#include "const.h"
 
-uint8_t matrix[6][6][WIDTH][HEIGHT] = {
-    {{2, 1, 0}, {5, 4, 3}, {8, 7, 6}}, {{11, 10, 9}, {14, 13, 12}, {17, 16, 15}}, {{20, 19, 18}, {23, 22, 21}, {26, 25, 24}}, {{29, 28, 27}, {32, 31, 30}, {35, 34, 33}}, {{38, 37, 36}, {41, 40, 39}, {44, 43, 42}}, {{53, 52, 51}, {50, 49, 48}, {47, 46, 45}}};
+// libs
+#include <SparkFun_ADXL345.h>
+#include <EEPROM.h>
+#include "LedFx.h"
 
-uint8_t getAddr(uint8_t sideUp, uint8_t side, int x, int y)
-{
-    return matrix[sideUp][side][x][y];
-}
+boolean active = true;
+boolean freeFall = false;
+uint32_t restTmr = millis();
+
+// instances
+ADXL345 adxl = ADXL345();
+LedFx ledFx = LedFx();
 
 boolean inBetween(int value, int min, int max)
 {
@@ -67,6 +55,10 @@ int whichSideUp(int _x, int _y, int _z)
 
 void setNextEffect()
 {
+  if (freeFall) {
+    return;
+  }
+
   ledFx.setNextEffect();
 
   EEPROM.put(200, ledFx.effect);
@@ -117,11 +109,28 @@ void ADXL_ISR()
   }
 }
 
+void waitForFreeFall(int &x, int &y, int &z) {
+  int rollThreshold = 20;
+  float magnitude = sqrt(pow(x, 2) + pow(y, 2) + pow(z, 2));
+
+  if (freeFall) {
+    return;
+  }
+
+  if (magnitude >= rollThreshold) {
+    Serial.println("*** FREE FALL ***");
+
+    freeFall = true;
+  } else {
+    freeFall = false;
+  }
+}
+
 // rest and power
 void waitForRest(int &x, int &y, int &z)
 {
   static int lastAccels[3];
-  float restThreshold = 40;
+  int restThreshold = 80;
   int accelDeltas[3] = {0, 0, 0};
   int accels[3] = {x, y, z};
 
@@ -142,8 +151,9 @@ void waitForRest(int &x, int &y, int &z)
 
   if (
       accelDeltas[0] < restThreshold &&
-      accelDeltas[1] < restThreshold &&
-      accelDeltas[2] < restThreshold)
+      accelDeltas[1] < restThreshold
+      // accelDeltas[2] < restThreshold
+    )
   {
     if (active) {
       restTmr = millis();
@@ -153,18 +163,25 @@ void waitForRest(int &x, int &y, int &z)
   }
   else
   {
+    Serial.printf("accels: %d, %d, %d", accels[0], accels[1], accels[2]);
+    Serial.println();
+    Serial.printf("accelDeltas: %d, %d, %d", accelDeltas[0], accelDeltas[1], accelDeltas[2]);
+    Serial.println();
+
     active = true;
   }
 }
 
 void setSaveMode(boolean mode)
 {
-  if (mode == saveMode)
+  static boolean prevMode = false;
+
+  if (mode == prevMode)
   {
     return;
   }
 
-  saveMode = mode;
+  prevMode = mode;
 
   if (mode)
   {
@@ -180,25 +197,33 @@ void setSaveMode(boolean mode)
 
 void setFreeFallMode(boolean mode)
 {
+  static uint32_t freeFallTmr;
+  static boolean prevMode = false;
   static int prevEffect = -1;
 
-  if (mode == freeFall)
-  {
+  if (mode == prevMode) {
     return;
   }
 
   if (mode)
   {
+    freeFallTmr = millis();
+    prevMode = mode;
     prevEffect = ledFx.effect;
-    ledFx.setEffect(8);
+    ledFx.setEffect(15);
+
+    return;
   }
-  else
+
+  if (millis() - freeFallTmr < 1 * 1000) {
+    return;
+  }
+
+  if (prevEffect >= 0)
   {
-    if (prevEffect >= 0)
-    {
-      ledFx.setEffect(prevEffect);
-      prevEffect = -1;
-    }
+    ledFx.setEffect(prevEffect);
+    prevEffect = -1;
+    prevMode = mode;
   }
 }
 
@@ -222,13 +247,13 @@ void setup()
   adxl.setRangeSetting(2);
 
   adxl.setActivityXYZ(1, 0, 0);
-  adxl.setActivityThreshold(300);
+  adxl.setActivityThreshold(75);
 
   adxl.setInactivityXYZ(1, 0, 0);
   adxl.setInactivityThreshold(75);
-  adxl.setTimeInactivity(5);
+  adxl.setTimeInactivity(10);
 
-  adxl.setTapDetectionOnXYZ(1, 1, 1);
+  adxl.setTapDetectionOnXYZ(0, 0, 1);
   adxl.setTapThreshold(50);
   adxl.setTapDuration(15);
 
@@ -245,8 +270,21 @@ void setup()
   adxl.singleTapINT(0);
 }
 
+// uint32_t freeFallTmr = millis();
+
 void loop()
 {
+  ADXL_ISR();
+
+  // if (millis() - freeFallTmr >= 5 * 1000)
+  // {
+  //   Serial.print("*** freeFallTmr *** ");
+  //   Serial.println(!freeFall);
+
+  //   freeFallTmr = millis();
+  //   freeFall = !freeFall;
+  // }
+
   int x, y, z;
   adxl.readAccel(&x, &y, &z);
   // currentPosition = whichSideUp(x, y, z);
@@ -267,5 +305,4 @@ void loop()
   }
 
   ledFx.loop();
-  ADXL_ISR();
 }
