@@ -147,9 +147,6 @@ void LedFx::setEffect(uint8_t eff)
         return;
     }
 
-    Serial.print("setEffect: ");
-    Serial.println(eff);
-
     if (eff >= _effects)
     {
         eff = 0;
@@ -461,7 +458,7 @@ void LedFx::_snowRoutineEffect()
         _leds[i] = random(0, 2) ? CRGB::White : CRGB::Black;
     }
 
-    // _fader(70);
+    _fader(70);
 }
 
 void LedFx::_matrixRoutineEffect()

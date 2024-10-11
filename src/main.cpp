@@ -19,11 +19,13 @@
 // libs
 #include <SparkFun_ADXL345.h>
 #include <EEPROM.h>
+// #include <GyverPower.h>
 #include "LedFx.h"
 
+// variables
 boolean active = true;
 boolean freeFall = false;
-uint32_t restTmr = millis();
+uint32_t activityTmr = millis();
 
 // instances
 ADXL345 adxl = ADXL345();
@@ -55,7 +57,8 @@ int whichSideUp(int _x, int _y, int _z)
 
 void setNextEffect()
 {
-  if (freeFall) {
+  if (freeFall)
+  {
     return;
   }
 
@@ -109,28 +112,11 @@ void ADXL_ISR()
   }
 }
 
-void waitForFreeFall(int &x, int &y, int &z) {
-  int rollThreshold = 20;
-  float magnitude = sqrt(pow(x, 2) + pow(y, 2) + pow(z, 2));
-
-  if (freeFall) {
-    return;
-  }
-
-  if (magnitude >= rollThreshold) {
-    Serial.println("*** FREE FALL ***");
-
-    freeFall = true;
-  } else {
-    freeFall = false;
-  }
-}
-
 // rest and power
-void waitForRest(int &x, int &y, int &z)
+void checkActivity(int &x, int &y, int &z)
 {
   static int lastAccels[3];
-  int restThreshold = 80;
+  int restThreshold = 60;
   int accelDeltas[3] = {0, 0, 0};
   int accels[3] = {x, y, z};
 
@@ -153,46 +139,35 @@ void waitForRest(int &x, int &y, int &z)
       accelDeltas[0] < restThreshold &&
       accelDeltas[1] < restThreshold
       // accelDeltas[2] < restThreshold
-    )
-  {
-    if (active) {
-      restTmr = millis();
-    }
-
+  ) {
     active = false;
   }
   else
   {
-    Serial.printf("accels: %d, %d, %d", accels[0], accels[1], accels[2]);
-    Serial.println();
-    Serial.printf("accelDeltas: %d, %d, %d", accelDeltas[0], accelDeltas[1], accelDeltas[2]);
-    Serial.println();
-
     active = true;
   }
 }
 
 void setSaveMode(boolean mode)
 {
-  static boolean prevMode = false;
+  static uint32_t saveTmr;
 
-  if (mode == prevMode)
+  if (!mode)
+  {
+    saveTmr = millis();
+    adxl.setLowPower(false);
+    ledFx.enable();
+
+    return;
+  }
+
+  if (millis() - saveTmr < 10 * 1000)
   {
     return;
   }
 
-  prevMode = mode;
-
-  if (mode)
-  {
-    adxl.setLowPower(true);
-    ledFx.disable();
-  }
-  else
-  {
-    adxl.setLowPower(false);
-    ledFx.enable();
-  }
+  adxl.setLowPower(true);
+  ledFx.disable();
 }
 
 void setFreeFallMode(boolean mode)
@@ -201,7 +176,8 @@ void setFreeFallMode(boolean mode)
   static boolean prevMode = false;
   static int prevEffect = -1;
 
-  if (mode == prevMode) {
+  if (mode == prevMode)
+  {
     return;
   }
 
@@ -215,7 +191,8 @@ void setFreeFallMode(boolean mode)
     return;
   }
 
-  if (millis() - freeFallTmr < 1 * 1000) {
+  if (millis() - freeFallTmr < 1 * 1000)
+  {
     return;
   }
 
@@ -233,6 +210,9 @@ void setup()
   Serial.begin(9600);
   Serial.println("Started");
 
+  // power.autoCalibrate();
+  // power.hardwareDisable(PWR_ALL);
+
   if (EEPROM.read(198) != 20)
   {
     EEPROM.put(198, 20);
@@ -244,6 +224,7 @@ void setup()
   ledFx.begin((uint8_t)EEPROM.read(200));
 
   adxl.powerOn();
+  adxl.setSpiBit(0);
   adxl.setRangeSetting(2);
 
   adxl.setActivityXYZ(1, 0, 0);
@@ -270,39 +251,21 @@ void setup()
   adxl.singleTapINT(0);
 }
 
-// uint32_t freeFallTmr = millis();
-
 void loop()
 {
+  if (millis() - activityTmr >= 300)
+  {
+    activityTmr = millis();
+
+    int x, y, z;
+    adxl.readAccel(&x, &y, &z);
+    // currentPosition = whichSideUp(x, y, z);
+    checkActivity(x, y, z);
+    setFreeFallMode(freeFall);
+    setSaveMode(!active);
+  }
+
   ADXL_ISR();
-
-  // if (millis() - freeFallTmr >= 5 * 1000)
-  // {
-  //   Serial.print("*** freeFallTmr *** ");
-  //   Serial.println(!freeFall);
-
-  //   freeFallTmr = millis();
-  //   freeFall = !freeFall;
-  // }
-
-  int x, y, z;
-  adxl.readAccel(&x, &y, &z);
-  // currentPosition = whichSideUp(x, y, z);
-  waitForRest(x, y, z);
-  setFreeFallMode(freeFall);
-
-  if (active)
-  {
-    setSaveMode(false);
-  }
-  else
-  {
-    if (millis() - restTmr >= 10 * 1000)
-    {
-      restTmr = millis();
-      setSaveMode(true);
-    }
-  }
-
   ledFx.loop();
+  // power.sleepDelay(300);
 }
