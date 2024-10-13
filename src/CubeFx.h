@@ -83,14 +83,14 @@ private:
     void _lavaNoiseEffect();
 
     // utils
-    void _fillAll(CRGB color);
-    void _fillFromPalette(uint8_t colorIndex);
-    void _fillNoiseLED();
     CRGB _getColorForSide(int s, int brigthness);
     uint8_t _getPixelAddr(uint8_t side, int x, int y);
     uint8_t _getPixelNumber(int8_t x, int8_t y);
     uint32_t _getPixelColor(int segment);
     uint32_t _getPixColorXY(int8_t x, int8_t y);
+    void _fillAll(CRGB color);
+    void _fillFromPalette(uint8_t colorIndex);
+    void _fillNoiseLED();
     void _drawPixelXY(int8_t x, int8_t y, CRGB color);
     void _fadePixel(byte i, byte j, byte step);
     void _fader(byte step);
