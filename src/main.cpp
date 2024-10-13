@@ -20,7 +20,7 @@
 #include <SparkFun_ADXL345.h>
 #include <EEPROM.h>
 // #include <GyverPower.h>
-#include "LedFx.h"
+#include "CubeFx.h"
 
 // variables
 boolean active = true;
@@ -29,7 +29,7 @@ uint32_t activityTmr = millis();
 
 // instances
 ADXL345 adxl = ADXL345();
-LedFx ledFx = LedFx();
+CubeFx cubeFx = CubeFx();
 
 boolean inBetween(int value, int min, int max)
 {
@@ -62,12 +62,12 @@ void setNextEffect()
     return;
   }
 
-  ledFx.setNextEffect();
+  cubeFx.setNextEffect();
 
-  EEPROM.put(200, ledFx.effect);
+  EEPROM.put(200, cubeFx.effect);
 
   Serial.print("effect: ");
-  Serial.println(ledFx.effect);
+  Serial.println(cubeFx.effect);
 }
 
 void ADXL_ISR()
@@ -156,7 +156,7 @@ void setSaveMode(boolean mode)
   {
     saveTmr = millis();
     adxl.setLowPower(false);
-    ledFx.enable();
+    cubeFx.enable();
 
     return;
   }
@@ -167,7 +167,7 @@ void setSaveMode(boolean mode)
   }
 
   adxl.setLowPower(true);
-  ledFx.disable();
+  cubeFx.disable();
 }
 
 void setFreeFallMode(boolean mode)
@@ -185,8 +185,8 @@ void setFreeFallMode(boolean mode)
   {
     freeFallTmr = millis();
     prevMode = mode;
-    prevEffect = ledFx.effect;
-    ledFx.setEffect(15);
+    prevEffect = cubeFx.effect;
+    cubeFx.setEffect(15);
 
     return;
   }
@@ -198,7 +198,7 @@ void setFreeFallMode(boolean mode)
 
   if (prevEffect >= 0)
   {
-    ledFx.setEffect(prevEffect);
+    cubeFx.setEffect(prevEffect);
     prevEffect = -1;
     prevMode = mode;
   }
@@ -221,7 +221,7 @@ void setup()
 
   pinMode(LED_PIN, OUTPUT);
 
-  ledFx.begin((uint8_t)EEPROM.read(200));
+  cubeFx.begin((uint8_t)EEPROM.read(200));
 
   adxl.powerOn();
   adxl.setSpiBit(0);
@@ -266,6 +266,6 @@ void loop()
   }
 
   ADXL_ISR();
-  ledFx.loop();
+  cubeFx.loop();
   // power.sleepDelay(300);
 }
