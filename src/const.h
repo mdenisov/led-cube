@@ -15,6 +15,5 @@
 #define COLOR_ORDER GRB
 #define EFFECT_SCALE 100
 #define EFFECT_SPEED 50
-#define MAX_DIMENSION (max(WIDTH, HEIGHT))
 
 #endif

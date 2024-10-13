@@ -623,10 +623,10 @@ void CubeFx::_fillNoiseLED()
     {
         dataSmoothing = 200 - (EFFECT_SPEED * 4);
     }
-    for (int i = 0; i < MAX_DIMENSION; i++)
+    for (int i = 0; i < WIDTH; i++)
     {
         int ioffset = _effectScale * i;
-        for (int j = 0; j < MAX_DIMENSION; j++)
+        for (int j = 0; j < HEIGHT; j++)
         {
             int joffset = _effectScale * j;
 
