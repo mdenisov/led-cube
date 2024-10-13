@@ -58,7 +58,7 @@ private:
     uint8_t _effectStartIndex = 0;
     uint8_t _effectHue = 0;
     uint8_t _effectSat = 255;
-    uint16_t _effectScale = 30;
+    uint16_t _effectScale = EFFECT_SCALE;
     uint16_t _effectSpeed = EFFECT_SPEED;
     uint8_t _effectColorLoop = 1;
     uint8_t _effectNoise[WIDTH][WIDTH];
