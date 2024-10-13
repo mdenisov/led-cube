@@ -21,7 +21,6 @@ public:
     void enable();
     void setEffect(uint8_t effect);
     void setNextEffect();
-    void setDebugMode(boolean debug);
 
 private:
     uint8_t _size;
