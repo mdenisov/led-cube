@@ -140,6 +140,16 @@ void CubeFx::enable()
     _enabled = true;
 }
 
+boolean CubeFx::enabled()
+{
+    return _enabled;
+}
+
+uint8_t CubeFx::brightness()
+{
+    return _brightness;
+}
+
 void CubeFx::setEffect(uint8_t eff)
 {
     if (eff == effect)

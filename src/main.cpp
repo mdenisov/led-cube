@@ -139,7 +139,8 @@ void checkActivity(int &x, int &y, int &z)
       accelDeltas[0] < restThreshold &&
       accelDeltas[1] < restThreshold
       // accelDeltas[2] < restThreshold
-  ) {
+  )
+  {
     active = false;
   }
   else
@@ -211,15 +212,14 @@ void setup()
   Serial.println("Started");
 
   // power.autoCalibrate();
-  // power.hardwareDisable(PWR_ALL);
+  // power.correctMillis(true);
+  // power.hardwareDisable(PWR_ADC | PWR_TIMER1 | PWR_TIMER2 | PWR_TIMER3 | PWR_TIMER4 | PWR_TIMER5 | PWR_UART1 | PWR_UART2 | PWR_UART3 | PWR_SPI | PWR_USB);
 
   if (EEPROM.read(198) != 20)
   {
     EEPROM.put(198, 20);
     EEPROM.put(200, 0);
   }
-
-  pinMode(LED_PIN, OUTPUT);
 
   cubeFx.begin((uint8_t)EEPROM.read(200));
 
@@ -253,19 +253,27 @@ void setup()
 
 void loop()
 {
+  ADXL_ISR();
+
   if (millis() - activityTmr >= 300)
   {
     activityTmr = millis();
 
     int x, y, z;
     adxl.readAccel(&x, &y, &z);
+
+    // Serial.println(active);
+    // Serial.println(cubeFx.brightness());
+
     // currentPosition = whichSideUp(x, y, z);
     checkActivity(x, y, z);
     setFreeFallMode(freeFall);
     setSaveMode(!active);
   }
 
-  ADXL_ISR();
   cubeFx.loop();
-  // power.sleepDelay(300);
+
+  // if (!cubeFx.enabled() && cubeFx.brightness() == 0) {
+  //   power.sleepDelay(500);
+  // }
 }

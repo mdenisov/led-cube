@@ -19,6 +19,8 @@ public:
     void loop();
     void disable();
     void enable();
+    boolean enabled();
+    uint8_t brightness();
     void setEffect(uint8_t effect);
     void setNextEffect();
 
